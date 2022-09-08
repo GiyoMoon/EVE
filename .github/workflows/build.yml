@@ -1,11 +1,7 @@
-name: ci
-
-on:
-  push:
-    branches:
-
+name: build
+on: [push]
 jobs:
-  build-and-publish-java8:
+  build-java8:
     runs-on: ubuntu-latest
     steps:
       -
@@ -38,7 +34,7 @@ jobs:
             JAVA_URL=https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u345-b01/OpenJDK8U-jdk_x64_alpine-linux_hotspot_8u345b01.tar.gz
             JAVA_JDK=jdk8u345-b01
 
-  build-and-publish-java11:
+  build-java11:
     runs-on: ubuntu-latest
     steps:
       -
@@ -71,7 +67,7 @@ jobs:
             JAVA_URL=https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.16.1%2B1/OpenJDK11U-jdk_x64_alpine-linux_hotspot_11.0.16.1_1.tar.gz
             JAVA_JDK=jdk-11.0.16.1+1
 
-  build-and-publish-java17:
+  build-java17:
     runs-on: ubuntu-latest
     steps:
       -
