@@ -35,7 +35,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            JAVA_URL=https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u345-b01/OpenJDK8U-debugimage_x64_alpine-linux_hotspot_8u345b01.tar.gz
+            JAVA_URL=https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u345-b01/OpenJDK8U-jdk_x64_alpine-linux_hotspot_8u345b01.tar.gz
             JAVA_JDK=jdk8u345-b01
 
   build-and-publish-java11:
@@ -68,7 +68,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            JAVA_URL=https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.16.1%2B1/OpenJDK11U-debugimage_x64_alpine-linux_hotspot_11.0.16.1_1.tar.gz
+            JAVA_URL=https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.16.1%2B1/OpenJDK11U-jdk_x64_alpine-linux_hotspot_11.0.16.1_1.tar.gz
             JAVA_JDK=jdk-11.0.16.1+1
 
   build-and-publish-java17:

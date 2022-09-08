@@ -18,7 +18,6 @@ ARG JAVA_URL
 RUN cd ~/ && wget --no-check-certificate -O java_jdk.tar.gz -c $JAVA_URL
 RUN mkdir /usr/lib/jvm
 RUN cd /usr/lib/jvm && tar -xvzf ~/java_jdk.tar.gz
-RUN ls /usr/lib/jvm
 
 FROM alpine
 
