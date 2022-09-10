@@ -26,6 +26,9 @@ pub(crate) enum ServerStartError {
 pub(crate) enum ServerStatus {
     Offline,
     Starting,
-    Running { players: u8, max_players: u8 },
+    Running {
+        players: Option<u8>,
+        max_players: Option<u8>,
+    },
     Stopping,
 }

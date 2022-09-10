@@ -18,11 +18,11 @@ async fn main() -> Result<(), anyhow::Error> {
     env::var("SERVER_MEMORY")
         .expect("SERVER_MEMORY env var not found")
         .parse::<u16>()
-        .expect("SERVER_MEMORY env var has to be a u16 integer");
-    env::var("MAX_PLAYERS")
-        .expect("MAX_PLAYERS env var not found")
-        .parse::<u8>()
-        .expect("MAX_PLAYERS env var has to be a u8 integer");
+        .expect("SERVER_MEMORY env var has to be an u16 integer");
+    let _ = env::var("MAX_PLAYERS").map(|max| {
+        max.parse::<u8>()
+            .expect("MAX_PLAYERS env var has to be an u8 integer")
+    });
 
     info!("Starting up...");
 

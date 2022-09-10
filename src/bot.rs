@@ -15,7 +15,7 @@ pub async fn init() -> Result<(), anyhow::Error> {
     let token = env::var("DISCORD_TOKEN").unwrap();
     let channel_id: Id<ChannelMarker> =
         Id::new(env::var("CONSOLE_CHANNEL_ID").unwrap().parse().unwrap());
-    let max_players: u8 = env::var("MAX_PLAYERS").unwrap().parse().unwrap();
+    let max_players: Option<u8> = env::var("MAX_PLAYERS").ok().map(|max| max.parse().unwrap());
 
     let scheme = ShardScheme::Range {
         from: 0,
@@ -100,20 +100,14 @@ pub async fn init() -> Result<(), anyhow::Error> {
     while let Some((_, event)) = events.next().await {
         match event {
             Event::InteractionCreate(interaction) => {
-                match interaction.0.channel_id {
-                    // check if interaction comes from configured channel
-                    Some(c_id) if c_id == channel_id => {
-                        handle_interaction(
-                            application_id,
-                            Arc::clone(&http),
-                            Arc::clone(&server),
-                            sender.clone(),
-                            interaction,
-                        )
-                        .await?;
-                    }
-                    _ => {}
-                }
+                handle_interaction(
+                    application_id,
+                    Arc::clone(&http),
+                    Arc::clone(&server),
+                    sender.clone(),
+                    interaction,
+                )
+                .await?;
             }
             Event::Ready(_) => {
                 info!("Bot started!");

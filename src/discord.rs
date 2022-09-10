@@ -105,7 +105,7 @@ pub(crate) async fn handle_interaction(
                             interaction_client,
                             interaction.id,
                             &interaction.token,
-                            format!(":green_circle: Passing `{}` to the server instance", cmd),
+                            format!("`{}`", cmd),
                         )
                         .await;
                         sender.send(ServerCommand::Stdin(cmd)).await.unwrap();
@@ -127,13 +127,6 @@ pub(crate) async fn handle_interaction(
                     .find(|option| option.name == "message")
                 {
                     if let CommandOptionValue::String(msg) = cmd.value {
-                        respond_to_interaction(
-                            interaction_client,
-                            interaction.id,
-                            &interaction.token,
-                            format!(":green_circle: Passing `{}` to the minecraft chat", msg),
-                        )
-                        .await;
                         let user = client
                             .user(interaction.author_id().unwrap())
                             .exec()
@@ -143,6 +136,14 @@ pub(crate) async fn handle_interaction(
                             .await
                             .unwrap()
                             .name;
+
+                        respond_to_interaction(
+                            interaction_client,
+                            interaction.id,
+                            &interaction.token,
+                            format!("<{} Discord> {}", user, msg),
+                        )
+                        .await;
                         let msg = format!(
                             r##"tellraw @a ["",{{"text":"<{} "}},{{"text":"Discord","color":"#5865F2"}},{{"text":">","color":"white"}},{{"text":" {}"}}]"##,
                             user, msg
@@ -188,18 +189,18 @@ pub(crate) async fn set_commands(
     let commands = [
         CommandBuilder::new(
             "start",
-            "Starts the minecraft server",
+            "Starts the Minecraft server",
             CommandType::ChatInput,
         )
         .build(),
-        CommandBuilder::new("stop", "Stops the minecraft server", CommandType::ChatInput).build(),
+        CommandBuilder::new("stop", "Stops the Minecraft server", CommandType::ChatInput).build(),
         CommandBuilder::new(
             "send",
-            "Send any command to the Minecraft server instance.",
+            "Pass a command to the Minecraft server.",
             CommandType::ChatInput,
         )
         .option(CommandOption::String(ChoiceCommandOptionData {
-            description: "Command to pass to the server instance.".to_string(),
+            description: "Command to pass to the server.".to_string(),
             name: "command".to_string(),
             required: true,
             ..Default::default()
@@ -271,7 +272,7 @@ async fn respond_to_interaction(
 pub(crate) async fn manage_status(
     cluster: Arc<Cluster>,
     current_status: ServerStatus,
-    max_players: u8,
+    max_players: Option<u8>,
     msg: &str,
 ) -> ServerStatus {
     if current_status == ServerStatus::Offline {
@@ -282,13 +283,13 @@ pub(crate) async fn manage_status(
         set_status(
             cluster,
             ServerStatus::Running {
-                players: 0,
+                players: Some(0),
                 max_players,
             },
         )
         .await;
         return ServerStatus::Running {
-            players: 0,
+            players: Some(0),
             max_players,
         };
     }
@@ -297,31 +298,31 @@ pub(crate) async fn manage_status(
         max_players,
     } = current_status
     {
-        if msg.contains("logged in with entity id") {
+        if msg.contains("logged in with entity id") && max_players.is_some() {
             set_status(
                 cluster,
                 ServerStatus::Running {
-                    players: players + 1,
+                    players: Some(players.unwrap() + 1),
                     max_players,
                 },
             )
             .await;
             return ServerStatus::Running {
-                players: players + 1,
+                players: Some(players.unwrap() + 1),
                 max_players,
             };
         }
-        if msg.contains("lost connection: ") {
+        if msg.contains("lost connection: ") && max_players.is_some() {
             set_status(
                 cluster,
                 ServerStatus::Running {
-                    players: players - 1,
+                    players: Some(players.unwrap() - 1),
                     max_players,
                 },
             )
             .await;
             return ServerStatus::Running {
-                players: players - 1,
+                players: Some(players.unwrap() - 1),
                 max_players,
             };
         }
@@ -361,7 +362,11 @@ pub(crate) async fn set_status(cluster: Arc<Cluster>, status: ServerStatus) {
         } => {
             let activity = Activity::from(MinimalActivity {
                 kind: ActivityType::Playing,
-                name: format!("🟢 Online | {}/{}", players, max_players),
+                name: if players.is_some() && max_players.is_some() {
+                    format!("🟢 Online | {}/{}", players.unwrap(), max_players.unwrap())
+                } else {
+                    "🟢 Online".to_string()
+                },
                 url: None,
             });
             UpdatePresence::new(Vec::from([activity]), false, None, Status::Online).unwrap()

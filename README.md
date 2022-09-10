@@ -4,13 +4,13 @@ EVE lets you control a Minecraft server through Discord. It routes everything fr
 
 ![Example](./assets/example.png)
 ## Configuration
-To run Eve, you need to set up a few environment variables:
+To run EVE, you need to set up a few environment variables:
 
 - `DISCORD_TOKEN`: The token of you Discord bot
 - `CONSOLE_CHANNEL_ID`: The the ID of the Discord channel which should be used as the console. EVE will pass every output from the server into this channel
 - `SERVER_JAR_PATH`: Path to the server executable. E.g. `/srv/server/server.jar`
 - `SERVER_MEMORY`: Memory in megabytes to assign to the minecraft server. E.g `6144`
-- `MAX_PLAYERS`: Max players of your minecraft server. (This is only used for the bot presence)
+- `MAX_PLAYERS`: (Optional) Max players of your minecraft server. This is only used for the bot presence and if not provided, it won't show the player count there.
 - `JVM_FLAGS`: (Optional) Additional jvm flags to pass to the server instance
 - `RUST_LOG`: (Optional) Rust log level (Does not affect the server output). Set it to `info` to recieve all information or to `warn` if you just want to receive warnings/errors.
 
@@ -43,7 +43,7 @@ sudo touch /etc/systemd/system/eve.service
 Insert this content:
 ```
 [Unit]
-Description=Eve
+Description=EVE
 Wants=network-online.target
 After=network-online.target
 
