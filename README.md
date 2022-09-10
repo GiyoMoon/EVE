@@ -17,13 +17,13 @@ To run Eve, you need to set up a few environment variables:
 ## Running
 There are multiple ways to run EVE:
 ### Docker
-The most convenient way is to run it in a Docker container. EVE gets automatically builded and deployed on [Github Packages](https://github.com/GiyoMoon/rusty-eve/pkgs/container/rusty-eve) and can be pulled from there.
+The most convenient way is to run it in a Docker container. EVE gets automatically builded and deployed on [Github Packages](https://github.com/GiyoMoon/EVE/pkgs/container/eve) and can be pulled from there.
 
-**Important**: Please note that the server is run as a non-root user. You may need to change the permissions of your server folder.
+**Note**: The server is run as a non-root user. You may need to change the permissions of your server folder.
 
 Example run command:
 ```bash
-docker run -d -p 25565:25565 -e RUST_LOG=info -e DISCORD_TOKEN=YOUR_BOT_TOKEN -e CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID -e SERVER_JAR_PATH=/eve/server/server.jar -e SERVER_MEMORY=6144 -e MAX_PLAYERS=5 -v /srv/server:/eve/server --name EVE ghcr.io/giyomoon/rusty-eve:java17
+docker run -d -p 25565:25565 -e RUST_LOG=info -e DISCORD_TOKEN=YOUR_BOT_TOKEN -e CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID -e SERVER_JAR_PATH=/eve/server/server.jar -e SERVER_MEMORY=6144 -e MAX_PLAYERS=5 -v /srv/server:/eve/server --name EVE ghcr.io/giyomoon/eve:java17
 ```
 Additional ports can be mapped if you are running a dynmap for example.
 
@@ -31,12 +31,12 @@ Additional ports can be mapped if you are running a dynmap for example.
 
 EVE gets build for three different Java versions. Java 17, 11 and 8. Depending on the version/type of your Minecraft server, you need to choose the correct version for you.
 
-- `Java 17`: `java17` (`ghcr.io/giyomoon/rusty-eve:java17`)
-- `Java 11`: `java11` (`ghcr.io/giyomoon/rusty-eve:java11`)
-- `Java 8`: `java8` (`ghcr.io/giyomoon/rusty-eve:java8`)
+- `Java 17`: `java17` (`ghcr.io/giyomoon/eve:java17`)
+- `Java 11`: `java11` (`ghcr.io/giyomoon/eve:java11`)
+- `Java 8`: `java8` (`ghcr.io/giyomoon/eve:java8`)
 
 ### Service
-It's also possible to directly use the executable and create a system service. There are pre built binaries under the [Releases](https://github.com/GiyoMoon/rusty-eve/releases), but feel free to build EVE for yourself :)
+It's also possible to directly use the executable and create a system service. There are pre built binaries under the [Releases](https://github.com/GiyoMoon/EVE/releases), but feel free to build EVE for yourself :)
 ```bash
 sudo touch /etc/systemd/system/eve.service
 ```
@@ -73,7 +73,7 @@ Environment="MAX_PLAYERS=5"
 [Install]
 WantedBy=multi-user.target
 ```
-**Note**: In this example I configured the service to run as the user `eve`. It's best practise to never run a minecraft server as root. Make sure your user has permission to execute the executable and access the server folder.
+**Note**: In this example I configured the service to run as the user `eve`. It's best practice to never run a minecraft server as root. Make sure your user has permission to execute the executable and access the server folder.
 
 Now, start the service:
 ```bash
