@@ -1,10 +1,9 @@
 mod bot;
 mod discord;
 mod minecraft;
-use std::env;
-
 use dotenvy::dotenv;
 use log::info;
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {

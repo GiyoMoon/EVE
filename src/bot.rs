@@ -48,18 +48,24 @@ pub async fn init() -> Result<(), anyhow::Error> {
 
     tokio::spawn(set_commands(application_id, Arc::clone(&http)));
 
+    let status = Arc::new(RwLock::new(ServerStatus::Offline));
+
+    let cluster_c = Arc::clone(&cluster);
+    let status_c = Arc::clone(&status);
     let http_c = Arc::clone(&http);
     tokio::spawn(async move {
-        set_status(Arc::clone(&cluster), ServerStatus::Offline).await;
-
         let cache = Arc::new(RwLock::new(String::new()));
         let timeout = Arc::new(RwLock::new(false));
 
-        let mut current_status = ServerStatus::Offline;
-
         while let Some(msg) = receiver.recv().await {
-            current_status =
-                manage_status(Arc::clone(&cluster), current_status, max_players, &msg).await;
+            let old_status = *status_c.read().await;
+            let new_status =
+                manage_status(Arc::clone(&cluster_c), old_status, max_players, &msg).await;
+
+            if new_status != old_status {
+                let mut status = status_c.write().await;
+                *status = new_status;
+            }
 
             let mut cache_w = cache.write().await;
             write!(cache_w, "\n{}", msg).unwrap();
@@ -111,6 +117,7 @@ pub async fn init() -> Result<(), anyhow::Error> {
             }
             Event::Ready(_) => {
                 info!("Bot started!");
+                set_status(Arc::clone(&cluster), *status.read().await).await;
             }
             _ => {}
         };

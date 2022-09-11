@@ -312,7 +312,7 @@ pub(crate) async fn manage_status(
                 max_players,
             };
         }
-        if msg.contains("lost connection: ") && max_players.is_some() {
+        if msg.contains(" left the game") && max_players.is_some() {
             set_status(
                 cluster,
                 ServerStatus::Running {
