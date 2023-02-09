@@ -53,7 +53,7 @@ impl ServerManager {
                             }
                             Err(e) => {
                                 event_sender_clone
-                                    .send(format!("Failed to start server: {}", e))
+                                    .send(format!("Failed to start server: {e}"))
                                     .await
                                     .unwrap();
                                 continue;

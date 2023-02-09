@@ -2,11 +2,11 @@ use crate::minecraft::{ServerCommand, ServerConfig, ServerManager, ServerStatus}
 use log::{info, warn};
 use std::{env, sync::Arc};
 use tokio::sync::mpsc;
-use twilight_gateway::Cluster;
+use twilight_gateway::MessageSender;
 use twilight_http::{client::InteractionClient, Client};
 use twilight_model::{
     application::{
-        command::{ChoiceCommandOptionData, CommandOption, CommandType},
+        command::CommandType,
         interaction::{application_command::CommandOptionValue, InteractionData},
     },
     gateway::{
@@ -22,7 +22,7 @@ use twilight_model::{
         Id,
     },
 };
-use twilight_util::builder::command::CommandBuilder;
+use twilight_util::builder::command::{CommandBuilder, StringBuilder};
 
 pub(crate) async fn log_stdout(
     client: Arc<Client>,
@@ -30,17 +30,12 @@ pub(crate) async fn log_stdout(
     channel_id: Id<ChannelMarker>,
 ) -> anyhow::Result<()> {
     if content.chars().count() <= 2000 {
-        client
-            .create_message(channel_id)
-            .content(&content)?
-            .exec()
-            .await?;
+        client.create_message(channel_id).content(&content)?.await?;
     } else {
         let attachment = Attachment::from_bytes("console.log".to_string(), content.into_bytes(), 1);
         client
             .create_message(channel_id)
             .attachments(&[attachment])?
-            .exec()
             .await?;
     }
     Ok(())
@@ -105,7 +100,7 @@ pub(crate) async fn handle_interaction(
                             interaction_client,
                             interaction.id,
                             &interaction.token,
-                            format!("`{}`", cmd),
+                            format!("`{cmd}`"),
                         )
                         .await;
                         sender.send(ServerCommand::Stdin(cmd)).await.unwrap();
@@ -129,7 +124,6 @@ pub(crate) async fn handle_interaction(
                     if let CommandOptionValue::String(msg) = cmd.value {
                         let user = client
                             .user(interaction.author_id().unwrap())
-                            .exec()
                             .await
                             .unwrap()
                             .model()
@@ -141,12 +135,11 @@ pub(crate) async fn handle_interaction(
                             interaction_client,
                             interaction.id,
                             &interaction.token,
-                            format!("<{} Discord> {}", user, msg),
+                            format!("<{user} Discord> {msg}"),
                         )
                         .await;
                         let msg = format!(
-                            r##"tellraw @a ["",{{"text":"<{} "}},{{"text":"Discord","color":"#5865F2"}},{{"text":">","color":"white"}},{{"text":" {}"}}]"##,
-                            user, msg
+                            r##"tellraw @a ["",{{"text":"<{user} "}},{{"text":"Discord","color":"#5865F2"}},{{"text":">","color":"white"}},{{"text":" {msg}"}}]"##
                         );
                         sender.send(ServerCommand::Stdin(msg)).await.unwrap();
                     }
@@ -199,24 +192,14 @@ pub(crate) async fn set_commands(
             "Pass a command to the Minecraft server.",
             CommandType::ChatInput,
         )
-        .option(CommandOption::String(ChoiceCommandOptionData {
-            description: "Command to pass to the server.".to_string(),
-            name: "command".to_string(),
-            required: true,
-            ..Default::default()
-        }))
+        .option(StringBuilder::new("command", "Command to pass to the server.").required(true))
         .build(),
         CommandBuilder::new(
             "say",
             "Pass a message to the ingame chat.",
             CommandType::ChatInput,
         )
-        .option(CommandOption::String(ChoiceCommandOptionData {
-            description: "Message to pass to the ingame chat.".to_string(),
-            name: "message".to_string(),
-            required: true,
-            ..Default::default()
-        }))
+        .option(StringBuilder::new("message", "Message to pass to the ingame chat.").required(true))
         .build(),
     ];
 
@@ -230,14 +213,10 @@ pub(crate) async fn set_commands(
         );
         interaction_client
             .set_guild_commands(guild_id, &commands)
-            .exec()
             .await?;
         info!("Commands set for guild {}", guild_id.to_string());
     } else {
-        interaction_client
-            .set_global_commands(&commands)
-            .exec()
-            .await?;
+        interaction_client.set_global_commands(&commands).await?;
         info!("Commands set globally");
     }
 
@@ -262,7 +241,6 @@ async fn respond_to_interaction(
                 }),
             },
         )
-        .exec()
         .await;
     if let Err(e) = result {
         warn!("Failed responding to interaction: {}", e);
@@ -270,18 +248,18 @@ async fn respond_to_interaction(
 }
 
 pub(crate) async fn manage_status(
-    cluster: Arc<Cluster>,
+    message_sender: Arc<MessageSender>,
     current_status: ServerStatus,
     max_players: Option<u8>,
     msg: &str,
 ) -> ServerStatus {
     if current_status == ServerStatus::Offline {
-        set_status(cluster, ServerStatus::Starting).await;
+        set_status(message_sender, ServerStatus::Starting).await;
         return ServerStatus::Starting;
     };
     if msg.contains("! For help, type \"help\"") {
         set_status(
-            cluster,
+            message_sender,
             ServerStatus::Running {
                 players: Some(0),
                 max_players,
@@ -300,7 +278,7 @@ pub(crate) async fn manage_status(
     {
         if msg.contains("logged in with entity id") && max_players.is_some() {
             set_status(
-                cluster,
+                message_sender,
                 ServerStatus::Running {
                     players: Some(players.unwrap() + 1),
                     max_players,
@@ -314,7 +292,7 @@ pub(crate) async fn manage_status(
         }
         if msg.contains(" left the game") && max_players.is_some() {
             set_status(
-                cluster,
+                message_sender,
                 ServerStatus::Running {
                     players: Some(players.unwrap() - 1),
                     max_players,
@@ -328,17 +306,17 @@ pub(crate) async fn manage_status(
         }
     }
     if msg.contains("Stopping the server") {
-        set_status(cluster, ServerStatus::Stopping).await;
+        set_status(message_sender, ServerStatus::Stopping).await;
         return ServerStatus::Stopping;
     }
     if msg.contains(":red_circle: Server stopped") {
-        set_status(cluster, ServerStatus::Offline).await;
+        set_status(message_sender, ServerStatus::Offline).await;
         return ServerStatus::Offline;
     }
     current_status
 }
 
-pub(crate) async fn set_status(cluster: Arc<Cluster>, status: ServerStatus) {
+pub(crate) async fn set_status(message_sender: Arc<MessageSender>, status: ServerStatus) {
     let request = match status {
         ServerStatus::Offline => {
             let activity = Activity::from(MinimalActivity {
@@ -380,10 +358,8 @@ pub(crate) async fn set_status(cluster: Arc<Cluster>, status: ServerStatus) {
             UpdatePresence::new(Vec::from([activity]), false, None, Status::Online).unwrap()
         }
     };
-    let shards = cluster.shards();
-    for shard in shards {
-        if let Err(e) = shard.command(&request).await {
-            warn!("Failed updating discord presence: {}", e);
-        }
+
+    if let Err(e) = message_sender.command(&request) {
+        warn!("Failed updating discord presence: {}", e);
     }
 }

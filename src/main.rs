@@ -12,7 +12,10 @@ async fn main() -> Result<(), anyhow::Error> {
 
     // make sure all environment variables exist at startup
     env::var("DISCORD_TOKEN").expect("DISCORD_TOKEN env var not found");
-    env::var("CONSOLE_CHANNEL_ID").expect("CONSOLE_CHANNEL_ID env var not found");
+    env::var("CONSOLE_CHANNEL_ID")
+        .expect("CONSOLE_CHANNEL_ID env var not found")
+        .parse::<u64>()
+        .expect("CONSOLE_CHANNEL_ID env var has to be an u64 integer");
     env::var("SERVER_JAR_PATH").expect("SERVER_JAR_PATH env var not found");
     env::var("SERVER_MEMORY")
         .expect("SERVER_MEMORY env var not found")
