@@ -3,7 +3,6 @@ on:
   push:
     tags:
       - 'v*'
-needs: [check, fmt, clippy]
 jobs:
   build-java8:
     runs-on: ubuntu-latest
