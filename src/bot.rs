@@ -4,83 +4,35 @@ use log::{info, warn};
 use std::fmt::Write;
 use std::time::Duration;
 use std::{env, sync::Arc};
+use tokio::sync::mpsc::Receiver;
 use tokio::sync::RwLock;
 use tokio::time;
-use twilight_gateway::{Event, Intents};
+use twilight_gateway::{Event, Intents, MessageSender};
 use twilight_gateway::{Shard, ShardId};
 use twilight_http::Client;
 use twilight_model::id::{marker::ChannelMarker, Id};
 
 pub async fn init() -> Result<(), anyhow::Error> {
     let token = env::var("DISCORD_TOKEN").unwrap();
-    let channel_id: Id<ChannelMarker> =
-        Id::new(env::var("CONSOLE_CHANNEL_ID").unwrap().parse().unwrap());
-    let max_players: Option<u8> = env::var("MAX_PLAYERS").ok().map(|max| max.parse().unwrap());
 
     let mut shard = Shard::new(ShardId::ONE, token.clone(), Intents::empty());
-    let message_sender = Arc::new(shard.sender());
+    let message_sender = shard.sender();
 
-    let http = Arc::new(Client::new(token));
-    let (server, sender, mut receiver) = ServerManager::new();
+    let client = Arc::new(Client::new(token));
+    let (server, sender, receiver) = ServerManager::new();
 
-    let application_id = http.current_user_application().await?.model().await?.id;
+    let application_id = client.current_user_application().await?.model().await?.id;
 
-    tokio::spawn(set_commands(application_id, Arc::clone(&http)));
+    tokio::spawn(set_commands(application_id, client.clone()));
 
     let status = Arc::new(RwLock::new(ServerStatus::Offline));
 
-    let message_sender_c = Arc::clone(&message_sender);
-    let status_c = Arc::clone(&status);
-    let http_c = Arc::clone(&http);
-    tokio::spawn(async move {
-        let cache = Arc::new(RwLock::new(String::new()));
-        let timeout = Arc::new(RwLock::new(false));
-
-        while let Some(msg) = receiver.recv().await {
-            let old_status = *status_c.read().await;
-            let new_status =
-                manage_status(Arc::clone(&message_sender_c), old_status, max_players, &msg).await;
-
-            if new_status != old_status {
-                let mut status = status_c.write().await;
-                *status = new_status;
-            }
-
-            let mut cache_w = cache.write().await;
-            write!(cache_w, "\n{msg}").unwrap();
-
-            if !*timeout.read().await {
-                let mut timeout_w = timeout.write().await;
-                *timeout_w = true;
-
-                let cached_c = Arc::clone(&cache);
-                let timeout_c = Arc::clone(&timeout);
-                let http_cc = Arc::clone(&http_c);
-                tokio::spawn(async move {
-                    // Timeout can't be lower than 800 ms due to Discord's rate limit
-                    time::sleep(Duration::from_millis(800)).await;
-
-                    let mut cache_w = cached_c.write().await;
-                    let mut timeout_w = timeout_c.write().await;
-                    let send_result =
-                        log_stdout(Arc::clone(&http_cc), cache_w.to_string(), channel_id).await;
-                    if let Err(e) = send_result {
-                        warn!("Failed to send logs to Discord channel: {}", e);
-                    }
-                    *cache_w = String::new();
-                    *timeout_w = false;
-                });
-            }
-        }
-
-        let cache = cache.read().await;
-        if !cache.is_empty() {
-            let send_result = log_stdout(http_c, cache.to_string(), channel_id).await;
-            if let Err(e) = send_result {
-                warn!("Failed to send logs to Discord channel: {}", e);
-            }
-        }
-    });
+    message_receiver(
+        receiver,
+        message_sender.clone(),
+        status.clone(),
+        client.clone(),
+    );
 
     loop {
         match shard.next_event().await {
@@ -88,8 +40,8 @@ pub async fn init() -> Result<(), anyhow::Error> {
                 Event::InteractionCreate(interaction) => {
                     handle_interaction(
                         application_id,
-                        Arc::clone(&http),
-                        Arc::clone(&server),
+                        client.clone(),
+                        server.clone(),
                         sender.clone(),
                         interaction,
                     )
@@ -97,7 +49,7 @@ pub async fn init() -> Result<(), anyhow::Error> {
                 }
                 Event::Ready(_) => {
                     info!("Bot started!");
-                    set_status(Arc::clone(&message_sender), *status.read().await).await;
+                    set_status(&message_sender, *status.read().await).await;
                 }
                 _ => {}
             },
@@ -114,4 +66,69 @@ pub async fn init() -> Result<(), anyhow::Error> {
     }
 
     Ok(())
+}
+
+fn message_receiver(
+    mut receiver: Receiver<String>,
+    message_sender: MessageSender,
+    status: Arc<RwLock<ServerStatus>>,
+    client: Arc<Client>,
+) {
+    let channel_id: Id<ChannelMarker> =
+        Id::new(env::var("CONSOLE_CHANNEL_ID").unwrap().parse().unwrap());
+    let max_players: Option<u8> = env::var("MAX_PLAYERS").ok().map(|max| max.parse().unwrap());
+
+    tokio::spawn(async move {
+        let cache = Arc::new(RwLock::new(String::new()));
+        let timeout = Arc::new(RwLock::new(false));
+
+        while let Some(msg) = receiver.recv().await {
+            let old_status = *status.read().await;
+            let new_status = manage_status(&message_sender, old_status, max_players, &msg).await;
+
+            if new_status != old_status {
+                let mut status = status.write().await;
+                *status = new_status;
+            }
+
+            let mut cache_w = cache.write().await;
+            write!(cache_w, "\n{msg}").unwrap();
+
+            if !*timeout.read().await {
+                let mut timeout_w = timeout.write().await;
+                *timeout_w = true;
+
+                send_logs(channel_id, cache.clone(), timeout.clone(), client.clone());
+            }
+        }
+
+        let cache = cache.read().await;
+        if !cache.is_empty() {
+            let send_result = log_stdout(client, cache.to_string(), channel_id).await;
+            if let Err(e) = send_result {
+                warn!("Failed to send logs to Discord channel: {e}");
+            }
+        }
+    });
+}
+
+fn send_logs(
+    channel_id: Id<ChannelMarker>,
+    cached: Arc<RwLock<String>>,
+    timeout: Arc<RwLock<bool>>,
+    client: Arc<Client>,
+) {
+    tokio::spawn(async move {
+        // Timeout can't be lower than 800 ms due to Discord's rate limit
+        time::sleep(Duration::from_millis(800)).await;
+
+        let mut cache_w = cached.write().await;
+        let mut timeout_w = timeout.write().await;
+        let send_result = log_stdout(client.clone(), cache_w.to_string(), channel_id).await;
+        if let Err(e) = send_result {
+            warn!("Failed to send logs to Discord channel: {e}");
+        }
+        *cache_w = String::new();
+        *timeout_w = false;
+    });
 }

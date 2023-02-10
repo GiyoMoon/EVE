@@ -6,15 +6,22 @@ pub(crate) struct ServerConfig {
     pub(super) path: PathBuf,
     pub(super) memory: u16,
     pub(super) jvm_flags: Option<String>,
+    pub(super) auto_accept_eula: bool,
 }
 
 impl ServerConfig {
-    pub fn new<P: Into<PathBuf>>(server_path: P, memory: u16, jvm_flags: Option<String>) -> Self {
+    pub fn new<P: Into<PathBuf>>(
+        server_path: P,
+        memory: u16,
+        jvm_flags: Option<String>,
+        auto_accept_eula: bool,
+    ) -> Self {
         let path = server_path.into();
         ServerConfig {
             path,
             memory,
             jvm_flags,
+            auto_accept_eula,
         }
     }
 

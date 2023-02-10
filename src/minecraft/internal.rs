@@ -1,7 +1,10 @@
 use super::{config::ServerConfig, enums::ServerStartError};
+use log::info;
 use std::{
     ffi::OsStr,
-    io,
+    fs::{self, File},
+    io::{self, Write},
+    path::Path,
     process::{ExitStatus, Stdio},
 };
 use tokio::{
@@ -15,7 +18,10 @@ pub(super) struct ServerInternal {
 }
 
 impl ServerInternal {
-    pub(super) fn launch(config: &ServerConfig) -> Result<(Self, Child), ServerStartError> {
+    pub(super) async fn launch(
+        config: &ServerConfig,
+        event_sender: mpsc::Sender<String>,
+    ) -> Result<(Self, Child), ServerStartError> {
         config.validate()?;
 
         let folder = config
@@ -34,6 +40,23 @@ impl ServerInternal {
             server_jar.to_str().unwrap_or(""),
             config.jvm_flags.as_deref().unwrap_or(""),
         );
+
+        let eula_path = &format!("{}/eula.txt", folder.to_str().unwrap());
+
+        if config.auto_accept_eula
+            && (!Path::new(eula_path).exists()
+                || !fs::read_to_string(eula_path).unwrap().contains("eula=true"))
+        {
+            info!("Accepting eula");
+            event_sender
+                .clone()
+                .send(":green_circle: Accepting eula".to_string())
+                .await
+                .unwrap();
+
+            let mut eula_file = File::create(eula_path)?;
+            eula_file.write_all(b"eula=true")?;
+        }
 
         let mut child = process::Command::new("java")
             .current_dir(folder)
@@ -57,10 +80,10 @@ impl ServerInternal {
 
         let await_process = tokio::spawn(async move { process.wait().await });
 
-        let sender_c = sender.clone();
+        let sender_clone = sender.clone();
         let stderr_handle = tokio::spawn(async move {
             while let Some(line) = stderr.next_line().await.unwrap() {
-                sender_c.send(line).await.unwrap();
+                sender_clone.send(line).await.unwrap();
             }
         });
         let stdout_handle = tokio::spawn(async move {

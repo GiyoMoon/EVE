@@ -12,6 +12,7 @@ To run EVE, you need to set up a few environment variables:
 - `SERVER_MEMORY`: Memory in megabytes to assign to the minecraft server. E.g `6144`
 - `MAX_PLAYERS`: (Optional) Max players of your minecraft server. This is only used for the bot presence and if not provided, it won't show the player count there.
 - `JVM_FLAGS`: (Optional) Additional jvm flags to pass to the server instance
+- `AUTO_ACCEPT_EULA`: (Optional) If the EULA should be accepted automatically
 - `RUST_LOG`: (Optional) Rust log level (Does not affect the server output). Set it to `info` to recieve all information or to `warn` if you just want to receive warnings/errors.
 
 ## Running
@@ -23,7 +24,7 @@ The most convenient way is to run it in a Docker container. EVE gets automatical
 
 Example run command:
 ```bash
-docker run -d -p 25565:25565 -e RUST_LOG=info -e DISCORD_TOKEN=YOUR_BOT_TOKEN -e CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID -e SERVER_JAR_PATH=/eve/server/server.jar -e SERVER_MEMORY=6144 -e MAX_PLAYERS=5 -v /srv/server:/eve/server --name EVE ghcr.io/giyomoon/eve:java17
+docker run -d -p 25565:25565 -e RUST_LOG=info -e DISCORD_TOKEN=YOUR_BOT_TOKEN -e CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID -e SERVER_JAR_PATH=/eve/server/server.jar -e SERVER_MEMORY=6144 -e MAX_PLAYERS=5 -e AUTO_ACCEPT_EULA=1 -v /srv/server:/eve/server --name EVE ghcr.io/giyomoon/eve:java17
 ```
 Additional ports can be mapped if you are running a dynmap for example.
 
@@ -69,6 +70,7 @@ Environment="CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID"
 Environment="SERVER_JAR_PATH=/srv/server/server.jar"
 Environment="SERVER_MEMORY=6144"
 Environment="MAX_PLAYERS=5"
+Environment="AUTO_ACCEPT_EULA=1"
 
 [Install]
 WantedBy=multi-user.target

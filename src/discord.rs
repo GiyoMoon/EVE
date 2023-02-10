@@ -64,10 +64,18 @@ pub(crate) async fn handle_interaction(
                     let server_path = env::var("SERVER_JAR_PATH").unwrap();
                     let memory = env::var("SERVER_MEMORY").unwrap().parse().unwrap();
                     let jvm_flags = env::var("JVM_FLAGS").ok();
+                    let auto_accept_eula = env::var("AUTO_ACCEPT_EULA").map_or(false, |v| {
+                        v == "1" || v.to_lowercase() == "true" || v.to_lowercase() == "t"
+                    });
 
                     sender
                         .send(ServerCommand::StartServer {
-                            config: ServerConfig::new(server_path, memory, jvm_flags),
+                            config: ServerConfig::new(
+                                server_path,
+                                memory,
+                                jvm_flags,
+                                auto_accept_eula,
+                            ),
                         })
                         .await
                         .unwrap();
@@ -243,12 +251,12 @@ async fn respond_to_interaction(
         )
         .await;
     if let Err(e) = result {
-        warn!("Failed responding to interaction: {}", e);
+        warn!("Failed responding to interaction: {e}");
     }
 }
 
 pub(crate) async fn manage_status(
-    message_sender: Arc<MessageSender>,
+    message_sender: &MessageSender,
     current_status: ServerStatus,
     max_players: Option<u8>,
     msg: &str,
@@ -316,7 +324,7 @@ pub(crate) async fn manage_status(
     current_status
 }
 
-pub(crate) async fn set_status(message_sender: Arc<MessageSender>, status: ServerStatus) {
+pub(crate) async fn set_status(message_sender: &MessageSender, status: ServerStatus) {
     let request = match status {
         ServerStatus::Offline => {
             let activity = Activity::from(MinimalActivity {
@@ -360,6 +368,6 @@ pub(crate) async fn set_status(message_sender: Arc<MessageSender>, status: Serve
     };
 
     if let Err(e) = message_sender.command(&request) {
-        warn!("Failed updating discord presence: {}", e);
+        warn!("Failed updating discord presence: {e}");
     }
 }

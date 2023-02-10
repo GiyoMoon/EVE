@@ -1,8 +1,9 @@
 name: build
 on:
   push:
-    branches:
-      - 'main'
+    tags:
+      - 'v*'
+  needs: [check, fmt, clippy]
 jobs:
   build-java8:
     runs-on: ubuntu-latest
@@ -17,7 +18,9 @@ jobs:
         with:
           images: ghcr.io/giyomoon/eve
           tags: |
-            type=raw,value={{branch}}-{{sha}}-java8
+            type=semver,pattern={{version}}-java8
+            type=semver,pattern={{major}}.{{minor}}-java8
+            type=semver,pattern={{major}}-java8
             type=raw,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }},value=java8
       -
         name: Login to GitHub Container Registry
@@ -50,7 +53,9 @@ jobs:
         with:
           images: ghcr.io/giyomoon/eve
           tags: |
-            type=raw,value={{branch}}-{{sha}}-java11
+            type=semver,pattern={{version}}-java11
+            type=semver,pattern={{major}}.{{minor}}-java11
+            type=semver,pattern={{major}}-java11
             type=raw,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }},value=java11
       -
         name: Login to GitHub Container Registry
@@ -83,7 +88,9 @@ jobs:
         with:
           images: ghcr.io/giyomoon/eve
           tags: |
-            type=raw,value={{branch}}-{{sha}}-java17
+            type=semver,pattern={{version}}-java17
+            type=semver,pattern={{major}}.{{minor}}-java17
+            type=semver,pattern={{major}}-java17
             type=raw,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }},value=java17
       -
         name: Login to GitHub Container Registry

@@ -23,8 +23,7 @@ impl ServerManager {
             internal: Arc::new(Mutex::new(None)),
         });
 
-        let self_clone = server.clone();
-        self_clone.spawn_listener(event_sender, cmd_receiver);
+        server.clone().spawn_listener(event_sender, cmd_receiver);
 
         (server, cmd_sender, event_receiver)
     }
@@ -46,19 +45,20 @@ impl ServerManager {
                         }
                         info!("Minecraft server started");
                         let event_sender_clone = event_sender.clone();
-                        let child = match ServerInternal::launch(&config) {
-                            Ok((internal, child)) => {
-                                *self.internal.lock().await = Some(internal);
-                                child
-                            }
-                            Err(e) => {
-                                event_sender_clone
-                                    .send(format!("Failed to start server: {e}"))
-                                    .await
-                                    .unwrap();
-                                continue;
-                            }
-                        };
+                        let child =
+                            match ServerInternal::launch(&config, event_sender.clone()).await {
+                                Ok((internal, child)) => {
+                                    *self.internal.lock().await = Some(internal);
+                                    child
+                                }
+                                Err(e) => {
+                                    event_sender_clone
+                                        .send(format!("Failed to start server: {e}"))
+                                        .await
+                                        .unwrap();
+                                    continue;
+                                }
+                            };
 
                         let sender = event_sender.clone();
                         let internal_clone = self.internal.clone();
@@ -86,7 +86,7 @@ impl ServerManager {
         let mut internal = self.internal.lock().await;
         if let Some(internal) = &mut *internal {
             if let Err(e) = internal.stdin.write_all(bytes).await {
-                warn!("Failed to write to Minecraft server stdin: {}", e);
+                warn!("Failed to write to Minecraft server stdin: {e}");
             }
         }
     }
