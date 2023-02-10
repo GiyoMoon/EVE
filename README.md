@@ -1,4 +1,4 @@
-![EVE](https://imgur.com/cgiKlF3.png)
+![EVE](./assets/logo.png)
 
 EVE lets you control a Minecraft server through Discord. It routes everything from the server `stdout/stderr` to a Discord channel and receives `stdin` commands from Discord and routes them back to the server instance.
 
