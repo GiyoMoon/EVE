@@ -18,9 +18,9 @@ jobs:
           images: ghcr.io/giyomoon/eve
           tags: |
             type=semver,pattern={{version}}-java8
-            type=semver,pattern={{major}}.{{minor}}-java8
-            type=semver,pattern={{major}}-java8
-            type=raw,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }},value=java8
+            type=raw,value=java8
+          flavor: |
+            latest=false
       -
         name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -53,9 +53,9 @@ jobs:
           images: ghcr.io/giyomoon/eve
           tags: |
             type=semver,pattern={{version}}-java11
-            type=semver,pattern={{major}}.{{minor}}-java11
-            type=semver,pattern={{major}}-java11
-            type=raw,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }},value=java11
+            type=raw,value=java11
+          flavor: |
+            latest=false
       -
         name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -88,9 +88,9 @@ jobs:
           images: ghcr.io/giyomoon/eve
           tags: |
             type=semver,pattern={{version}}-java17
-            type=semver,pattern={{major}}.{{minor}}-java17
-            type=semver,pattern={{major}}-java17
-            type=raw,enable=${{ endsWith(github.ref, github.event.repository.default_branch) }},value=java17
+            type=raw,value=java17
+          flavor: |
+            latest=false
       -
         name: Login to GitHub Container Registry
         uses: docker/login-action@v2
