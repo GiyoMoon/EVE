@@ -55,7 +55,7 @@ impl ServerManager {
                                     event_sender_clone
                                         .send(format!("Failed to start server: {e}"))
                                         .await
-                                        .unwrap();
+                                        .expect("Failed sending value over sender");
                                     continue;
                                 }
                             };
@@ -64,7 +64,12 @@ impl ServerManager {
                         let internal_clone = self.internal.clone();
 
                         tokio::spawn(async move {
-                            ServerInternal::run(child, sender.clone()).await.unwrap();
+                            let run_result = ServerInternal::run(child, sender.clone()).await;
+
+                            if let Err(err) = run_result {
+                                warn!("Minecraft process wasn't running: {err}");
+                            }
+
                             let _ = internal_clone.lock().await.take();
 
                             info!("Minecraft server stopped");
@@ -73,7 +78,7 @@ impl ServerManager {
                                 .clone()
                                 .send(":red_circle: Server stopped".to_string())
                                 .await
-                                .unwrap();
+                                .expect("Failed sending value over sender");
                         });
                     }
                 }

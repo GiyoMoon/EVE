@@ -27,7 +27,7 @@ pub(crate) enum ServerStatus {
     Offline,
     Starting,
     Running {
-        players: Option<u8>,
+        players: u8,
         max_players: Option<u8>,
     },
     Stopping,

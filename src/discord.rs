@@ -61,8 +61,8 @@ pub(crate) async fn handle_interaction(
                     )
                     .await;
 
-                    let server_path = env::var("SERVER_JAR_PATH").unwrap();
-                    let memory = env::var("SERVER_MEMORY").unwrap().parse().unwrap();
+                    let server_path = env::var("SERVER_JAR_PATH").expect("");
+                    let memory = env::var("SERVER_MEMORY").expect("").parse().expect("");
                     let jvm_flags = env::var("JVM_FLAGS").ok();
                     let auto_accept_eula = env::var("AUTO_ACCEPT_EULA").map_or(false, |v| {
                         v == "1" || v.to_lowercase() == "true" || v.to_lowercase() == "t"
@@ -78,7 +78,7 @@ pub(crate) async fn handle_interaction(
                             ),
                         })
                         .await
-                        .unwrap();
+                        .expect("Failed sending value over sender");
                 } else {
                     respond_to_interaction(
                         interaction_client,
@@ -111,7 +111,10 @@ pub(crate) async fn handle_interaction(
                             format!("`{cmd}`"),
                         )
                         .await;
-                        sender.send(ServerCommand::Stdin(cmd)).await.unwrap();
+                        sender
+                            .send(ServerCommand::Stdin(cmd))
+                            .await
+                            .expect("Failed sending value over sender");
                     }
                 }
             }
@@ -131,12 +134,16 @@ pub(crate) async fn handle_interaction(
                 {
                     if let CommandOptionValue::String(msg) = cmd.value {
                         let user = client
-                            .user(interaction.author_id().unwrap())
+                            .user(
+                                interaction
+                                    .author_id()
+                                    .expect("Failed getting author id of interaction"),
+                            )
                             .await
-                            .unwrap()
+                            .expect("Failed getting user information")
                             .model()
                             .await
-                            .unwrap()
+                            .expect("Failed getting user model")
                             .name;
 
                         respond_to_interaction(
@@ -149,7 +156,11 @@ pub(crate) async fn handle_interaction(
                         let msg = format!(
                             r##"tellraw @a ["",{{"text":"<{user} "}},{{"text":"Discord","color":"#5865F2"}},{{"text":">","color":"white"}},{{"text":" {msg}"}}]"##
                         );
-                        sender.send(ServerCommand::Stdin(msg)).await.unwrap();
+
+                        sender
+                            .send(ServerCommand::Stdin(msg))
+                            .await
+                            .expect("Failed sending value over sender");
                     }
                 }
             }
@@ -170,10 +181,11 @@ pub(crate) async fn handle_interaction(
                         ":orange_circle: Stopping the server...".to_string(),
                     )
                     .await;
+
                     sender
                         .send(ServerCommand::Stdin("stop".to_string()))
                         .await
-                        .unwrap();
+                        .expect("Failed sending value over sender");
                 }
             }
             _ => {}
@@ -269,13 +281,13 @@ pub(crate) async fn manage_status(
         set_status(
             message_sender,
             ServerStatus::Running {
-                players: Some(0),
+                players: 0,
                 max_players,
             },
         )
         .await;
         return ServerStatus::Running {
-            players: Some(0),
+            players: 0,
             max_players,
         };
     }
@@ -288,13 +300,13 @@ pub(crate) async fn manage_status(
             set_status(
                 message_sender,
                 ServerStatus::Running {
-                    players: Some(players.unwrap() + 1),
+                    players: players + 1,
                     max_players,
                 },
             )
             .await;
             return ServerStatus::Running {
-                players: Some(players.unwrap() + 1),
+                players: players + 1,
                 max_players,
             };
         }
@@ -302,13 +314,13 @@ pub(crate) async fn manage_status(
             set_status(
                 message_sender,
                 ServerStatus::Running {
-                    players: Some(players.unwrap() - 1),
+                    players: players - 1,
                     max_players,
                 },
             )
             .await;
             return ServerStatus::Running {
-                players: Some(players.unwrap() - 1),
+                players: players - 1,
                 max_players,
             };
         }
@@ -332,7 +344,8 @@ pub(crate) async fn set_status(message_sender: &MessageSender, status: ServerSta
                 name: "🔴 Offline".to_owned(),
                 url: None,
             });
-            UpdatePresence::new(Vec::from([activity]), false, None, Status::Idle).unwrap()
+            UpdatePresence::new(Vec::from([activity]), false, None, Status::Idle)
+                .expect("Failed creating UpdatePresence payload")
         }
         ServerStatus::Starting => {
             let activity = Activity::from(MinimalActivity {
@@ -340,7 +353,8 @@ pub(crate) async fn set_status(message_sender: &MessageSender, status: ServerSta
                 name: "🟠 Starting".to_owned(),
                 url: None,
             });
-            UpdatePresence::new(Vec::from([activity]), false, None, Status::Online).unwrap()
+            UpdatePresence::new(Vec::from([activity]), false, None, Status::Online)
+                .expect("Failed creating UpdatePresence payload")
         }
         ServerStatus::Running {
             players,
@@ -348,14 +362,15 @@ pub(crate) async fn set_status(message_sender: &MessageSender, status: ServerSta
         } => {
             let activity = Activity::from(MinimalActivity {
                 kind: ActivityType::Playing,
-                name: if players.is_some() && max_players.is_some() {
-                    format!("🟢 Online | {}/{}", players.unwrap(), max_players.unwrap())
+                name: if let Some(max_players) = max_players {
+                    format!("🟢 Online | {}/{}", players, max_players)
                 } else {
                     "🟢 Online".to_string()
                 },
                 url: None,
             });
-            UpdatePresence::new(Vec::from([activity]), false, None, Status::Online).unwrap()
+            UpdatePresence::new(Vec::from([activity]), false, None, Status::Online)
+                .expect("Failed creating UpdatePresence payload")
         }
         ServerStatus::Stopping => {
             let activity = Activity::from(MinimalActivity {
@@ -363,7 +378,8 @@ pub(crate) async fn set_status(message_sender: &MessageSender, status: ServerSta
                 name: "🟠 Stopping".to_owned(),
                 url: None,
             });
-            UpdatePresence::new(Vec::from([activity]), false, None, Status::Online).unwrap()
+            UpdatePresence::new(Vec::from([activity]), false, None, Status::Online)
+                .expect("Failed creating UpdatePresence payload")
         }
     };
 

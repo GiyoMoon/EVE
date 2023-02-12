@@ -13,7 +13,7 @@ use twilight_http::Client;
 use twilight_model::id::{marker::ChannelMarker, Id};
 
 pub async fn init() -> Result<(), anyhow::Error> {
-    let token = env::var("DISCORD_TOKEN").unwrap();
+    let token = env::var("DISCORD_TOKEN").expect("");
 
     let mut shard = Shard::new(ShardId::ONE, token.clone(), Intents::empty());
     let message_sender = shard.sender();
@@ -75,8 +75,10 @@ fn message_receiver(
     client: Arc<Client>,
 ) {
     let channel_id: Id<ChannelMarker> =
-        Id::new(env::var("CONSOLE_CHANNEL_ID").unwrap().parse().unwrap());
-    let max_players: Option<u8> = env::var("MAX_PLAYERS").ok().map(|max| max.parse().unwrap());
+        Id::new(env::var("CONSOLE_CHANNEL_ID").expect("").parse().expect(""));
+    let max_players: Option<u8> = env::var("MAX_PLAYERS")
+        .ok()
+        .map(|max| max.parse().expect(""));
 
     tokio::spawn(async move {
         let cache = Arc::new(RwLock::new(String::new()));
@@ -92,7 +94,8 @@ fn message_receiver(
             }
 
             let mut cache_w = cache.write().await;
-            write!(cache_w, "\n{msg}").unwrap();
+            write!(cache_w, "\n{msg}")
+                .unwrap_or_else(|err| warn!("Failed to write logs to cache string: {err}"));
 
             if !*timeout.read().await {
                 let mut timeout_w = timeout.write().await;
@@ -104,10 +107,9 @@ fn message_receiver(
 
         let cache = cache.read().await;
         if !cache.is_empty() {
-            let send_result = log_stdout(client, cache.to_string(), channel_id).await;
-            if let Err(e) = send_result {
-                warn!("Failed to send logs to Discord channel: {e}");
-            }
+            log_stdout(client, cache.to_string(), channel_id)
+                .await
+                .unwrap_or_else(|err| warn!("Failed to send logs to Discord channel: {err}"));
         }
     });
 }
@@ -124,10 +126,9 @@ fn send_logs(
 
         let mut cache_w = cached.write().await;
         let mut timeout_w = timeout.write().await;
-        let send_result = log_stdout(client.clone(), cache_w.to_string(), channel_id).await;
-        if let Err(e) = send_result {
-            warn!("Failed to send logs to Discord channel: {e}");
-        }
+        log_stdout(client.clone(), cache_w.to_string(), channel_id)
+            .await
+            .unwrap_or_else(|err| warn!("Failed to send logs to Discord channel: {err}"));
         *cache_w = String::new();
         *timeout_w = false;
     });
