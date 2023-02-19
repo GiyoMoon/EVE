@@ -20,7 +20,7 @@ pub(super) struct ServerInternal {
 impl ServerInternal {
     pub(super) async fn launch(
         config: &ServerConfig,
-        event_sender: mpsc::Sender<String>,
+        stdout_sender: mpsc::Sender<String>,
     ) -> Result<(Self, Child), ServerStartError> {
         config.validate()?;
 
@@ -53,8 +53,7 @@ impl ServerInternal {
                     .contains("eula=true"))
         {
             info!("Accepting eula");
-            event_sender
-                .clone()
+            stdout_sender
                 .send(":green_circle: Accepting eula".to_string())
                 .await
                 .expect("Failed sending value over sender");
@@ -81,7 +80,7 @@ impl ServerInternal {
 
     pub(super) async fn run(
         mut process: Child,
-        sender: mpsc::Sender<String>,
+        stdout_sender: mpsc::Sender<String>,
     ) -> io::Result<ExitStatus> {
         let mut stdout = BufReader::new(
             process
@@ -100,14 +99,14 @@ impl ServerInternal {
 
         let await_process = tokio::spawn(async move { process.wait().await });
 
-        let sender_clone = sender.clone();
+        let stdout_sender_clone = stdout_sender.clone();
         let stderr_handle = tokio::spawn(async move {
             while let Some(line) = stderr
                 .next_line()
                 .await
                 .expect("Failed reading line from stderr of minecraft process")
             {
-                sender_clone
+                stdout_sender_clone
                     .send(line)
                     .await
                     .expect("Failed sending value over sender");
@@ -119,7 +118,7 @@ impl ServerInternal {
                 .await
                 .expect("Failed reading line from stdout of minecraft process")
             {
-                sender
+                stdout_sender
                     .send(line)
                     .await
                     .expect("Failed sending value over sender");

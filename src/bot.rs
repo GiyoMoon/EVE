@@ -16,10 +16,10 @@ pub async fn init() -> Result<(), anyhow::Error> {
     let token = env::var("DISCORD_TOKEN").expect("");
 
     let mut shard = Shard::new(ShardId::ONE, token.clone(), Intents::empty());
-    let message_sender = shard.sender();
+    let discord_msg_sender = shard.sender();
 
     let client = Arc::new(Client::new(token));
-    let (server, sender, receiver) = ServerManager::new();
+    let (server, cmd_sender, stout_receiver) = ServerManager::new();
 
     let application_id = client.current_user_application().await?.model().await?.id;
 
@@ -28,8 +28,8 @@ pub async fn init() -> Result<(), anyhow::Error> {
     let status = Arc::new(RwLock::new(ServerStatus::Offline));
 
     message_receiver(
-        receiver,
-        message_sender.clone(),
+        stout_receiver,
+        discord_msg_sender.clone(),
         status.clone(),
         client.clone(),
     );
@@ -42,14 +42,14 @@ pub async fn init() -> Result<(), anyhow::Error> {
                         application_id,
                         client.clone(),
                         server.clone(),
-                        sender.clone(),
+                        cmd_sender.clone(),
                         interaction,
                     )
                     .await?;
                 }
                 Event::Ready(_) => {
                     info!("Bot started!");
-                    set_status(&message_sender, *status.read().await).await;
+                    set_status(&discord_msg_sender, *status.read().await).await;
                 }
                 _ => {}
             },
@@ -69,8 +69,8 @@ pub async fn init() -> Result<(), anyhow::Error> {
 }
 
 fn message_receiver(
-    mut receiver: Receiver<String>,
-    message_sender: MessageSender,
+    mut stdout_receiver: Receiver<String>,
+    discord_msg_sender: MessageSender,
     status: Arc<RwLock<ServerStatus>>,
     client: Arc<Client>,
 ) {
@@ -84,9 +84,10 @@ fn message_receiver(
         let cache = Arc::new(RwLock::new(String::new()));
         let timeout = Arc::new(RwLock::new(false));
 
-        while let Some(msg) = receiver.recv().await {
+        while let Some(msg) = stdout_receiver.recv().await {
             let old_status = *status.read().await;
-            let new_status = manage_status(&message_sender, old_status, max_players, &msg).await;
+            let new_status =
+                manage_status(&discord_msg_sender, old_status, max_players, &msg).await;
 
             if new_status != old_status {
                 let mut status = status.write().await;
@@ -126,7 +127,7 @@ fn send_logs(
 
         let mut cache_w = cached.write().await;
         let mut timeout_w = timeout.write().await;
-        log_stdout(client.clone(), cache_w.to_string(), channel_id)
+        log_stdout(client, cache_w.to_string(), channel_id)
             .await
             .unwrap_or_else(|err| warn!("Failed to send logs to Discord channel: {err}"));
         *cache_w = String::new();

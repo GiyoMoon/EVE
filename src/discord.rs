@@ -45,7 +45,7 @@ pub(crate) async fn handle_interaction(
     app_id: Id<ApplicationMarker>,
     client: Arc<Client>,
     server: Arc<ServerManager>,
-    sender: mpsc::Sender<ServerCommand>,
+    cmd_sender: mpsc::Sender<ServerCommand>,
     interaction: Box<InteractionCreate>,
 ) -> Result<(), anyhow::Error> {
     if let Some(InteractionData::ApplicationCommand(data)) = interaction.clone().0.data {
@@ -68,7 +68,7 @@ pub(crate) async fn handle_interaction(
                         v == "1" || v.to_lowercase() == "true" || v.to_lowercase() == "t"
                     });
 
-                    sender
+                    cmd_sender
                         .send(ServerCommand::StartServer {
                             config: ServerConfig::new(
                                 server_path,
@@ -111,7 +111,7 @@ pub(crate) async fn handle_interaction(
                             format!("`{cmd}`"),
                         )
                         .await;
-                        sender
+                        cmd_sender
                             .send(ServerCommand::Stdin(cmd))
                             .await
                             .expect("Failed sending value over sender");
@@ -157,7 +157,7 @@ pub(crate) async fn handle_interaction(
                             r##"tellraw @a ["",{{"text":"<{user} "}},{{"text":"Discord","color":"#5865F2"}},{{"text":">","color":"white"}},{{"text":" {msg}"}}]"##
                         );
 
-                        sender
+                        cmd_sender
                             .send(ServerCommand::Stdin(msg))
                             .await
                             .expect("Failed sending value over sender");
@@ -182,7 +182,7 @@ pub(crate) async fn handle_interaction(
                     )
                     .await;
 
-                    sender
+                    cmd_sender
                         .send(ServerCommand::Stdin("stop".to_string()))
                         .await
                         .expect("Failed sending value over sender");
@@ -268,18 +268,18 @@ async fn respond_to_interaction(
 }
 
 pub(crate) async fn manage_status(
-    message_sender: &MessageSender,
+    discord_msg_sender: &MessageSender,
     current_status: ServerStatus,
     max_players: Option<u8>,
     msg: &str,
 ) -> ServerStatus {
     if current_status == ServerStatus::Offline {
-        set_status(message_sender, ServerStatus::Starting).await;
+        set_status(discord_msg_sender, ServerStatus::Starting).await;
         return ServerStatus::Starting;
     };
     if msg.contains("! For help, type \"help\"") {
         set_status(
-            message_sender,
+            discord_msg_sender,
             ServerStatus::Running {
                 players: 0,
                 max_players,
@@ -298,7 +298,7 @@ pub(crate) async fn manage_status(
     {
         if msg.contains("logged in with entity id") && max_players.is_some() {
             set_status(
-                message_sender,
+                discord_msg_sender,
                 ServerStatus::Running {
                     players: players + 1,
                     max_players,
@@ -312,7 +312,7 @@ pub(crate) async fn manage_status(
         }
         if msg.contains(" left the game") && max_players.is_some() {
             set_status(
-                message_sender,
+                discord_msg_sender,
                 ServerStatus::Running {
                     players: players - 1,
                     max_players,
@@ -326,17 +326,17 @@ pub(crate) async fn manage_status(
         }
     }
     if msg.contains("Stopping the server") {
-        set_status(message_sender, ServerStatus::Stopping).await;
+        set_status(discord_msg_sender, ServerStatus::Stopping).await;
         return ServerStatus::Stopping;
     }
     if msg.contains(":red_circle: Server stopped") {
-        set_status(message_sender, ServerStatus::Offline).await;
+        set_status(discord_msg_sender, ServerStatus::Offline).await;
         return ServerStatus::Offline;
     }
     current_status
 }
 
-pub(crate) async fn set_status(message_sender: &MessageSender, status: ServerStatus) {
+pub(crate) async fn set_status(discord_msg_sender: &MessageSender, status: ServerStatus) {
     let request = match status {
         ServerStatus::Offline => {
             let activity = Activity::from(MinimalActivity {
@@ -383,7 +383,7 @@ pub(crate) async fn set_status(message_sender: &MessageSender, status: ServerSta
         }
     };
 
-    if let Err(e) = message_sender.command(&request) {
+    if let Err(e) = discord_msg_sender.command(&request) {
         warn!("Failed updating discord presence: {e}");
     }
 }

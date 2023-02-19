@@ -17,20 +17,20 @@ impl ServerManager {
         mpsc::Receiver<String>,
     ) {
         let (cmd_sender, cmd_receiver) = mpsc::channel::<ServerCommand>(64);
-        let (event_sender, event_receiver) = mpsc::channel(64);
+        let (stdout_sender, stdout_receiver) = mpsc::channel(64);
 
         let server = Arc::new(ServerManager {
             internal: Arc::new(Mutex::new(None)),
         });
 
-        server.clone().spawn_listener(event_sender, cmd_receiver);
+        server.clone().spawn_listener(stdout_sender, cmd_receiver);
 
-        (server, cmd_sender, event_receiver)
+        (server, cmd_sender, stdout_receiver)
     }
 
     fn spawn_listener(
         self: Arc<Self>,
-        event_sender: mpsc::Sender<String>,
+        stdout_sender: mpsc::Sender<String>,
         mut cmd_receiver: mpsc::Receiver<ServerCommand>,
     ) {
         tokio::spawn(async move {
@@ -44,15 +44,14 @@ impl ServerManager {
                             continue;
                         }
                         info!("Minecraft server started");
-                        let event_sender_clone = event_sender.clone();
                         let child =
-                            match ServerInternal::launch(&config, event_sender.clone()).await {
+                            match ServerInternal::launch(&config, stdout_sender.clone()).await {
                                 Ok((internal, child)) => {
                                     *self.internal.lock().await = Some(internal);
                                     child
                                 }
                                 Err(e) => {
-                                    event_sender_clone
+                                    stdout_sender
                                         .send(format!("Failed to start server: {e}"))
                                         .await
                                         .expect("Failed sending value over sender");
@@ -60,11 +59,12 @@ impl ServerManager {
                                 }
                             };
 
-                        let sender = event_sender.clone();
+                        let stdout_sender_clone = stdout_sender.clone();
                         let internal_clone = self.internal.clone();
 
                         tokio::spawn(async move {
-                            let run_result = ServerInternal::run(child, sender.clone()).await;
+                            let run_result =
+                                ServerInternal::run(child, stdout_sender_clone.clone()).await;
 
                             if let Err(err) = run_result {
                                 warn!("Minecraft process wasn't running: {err}");
@@ -74,8 +74,7 @@ impl ServerManager {
 
                             info!("Minecraft server stopped");
 
-                            sender
-                                .clone()
+                            stdout_sender_clone
                                 .send(":red_circle: Server stopped".to_string())
                                 .await
                                 .expect("Failed sending value over sender");
