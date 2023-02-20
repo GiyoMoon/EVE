@@ -188,6 +188,31 @@ pub(crate) async fn handle_interaction(
                         .expect("Failed sending value over sender");
                 }
             }
+            "backup" => {
+                if !server.running().await {
+                    respond_to_interaction(
+                        interaction_client,
+                        interaction.id,
+                        &interaction.token,
+                        ":warning: Server isn't running. Start it with `/start`".to_string(),
+                    )
+                    .await;
+                } else {
+                    respond_to_interaction(
+                        interaction_client,
+                        interaction.id,
+                        &interaction.token,
+                        ":file_cabinet: Server backup started. This might take a while."
+                            .to_string(),
+                    )
+                    .await;
+
+                    cmd_sender
+                        .send(ServerCommand::Backup)
+                        .await
+                        .expect("Failed sending value over sender");
+                }
+            }
             _ => {}
         };
     }
@@ -220,6 +245,12 @@ pub(crate) async fn set_commands(
             CommandType::ChatInput,
         )
         .option(StringBuilder::new("message", "Message to pass to the ingame chat.").required(true))
+        .build(),
+        CommandBuilder::new(
+            "backup",
+            "Creates a backup of the Minecraft server",
+            CommandType::ChatInput,
+        )
         .build(),
     ];
 

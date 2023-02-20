@@ -4,8 +4,7 @@ use log::{info, warn};
 use std::fmt::Write;
 use std::time::Duration;
 use std::{env, sync::Arc};
-use tokio::sync::mpsc::Receiver;
-use tokio::sync::RwLock;
+use tokio::sync::{broadcast, RwLock};
 use tokio::time;
 use twilight_gateway::{Event, Intents, MessageSender};
 use twilight_gateway::{Shard, ShardId};
@@ -69,7 +68,7 @@ pub async fn init() -> Result<(), anyhow::Error> {
 }
 
 fn message_receiver(
-    mut stdout_receiver: Receiver<String>,
+    mut stdout_receiver: broadcast::Receiver<String>,
     discord_msg_sender: MessageSender,
     status: Arc<RwLock<ServerStatus>>,
     client: Arc<Client>,
@@ -84,7 +83,7 @@ fn message_receiver(
         let cache = Arc::new(RwLock::new(String::new()));
         let timeout = Arc::new(RwLock::new(false));
 
-        while let Some(msg) = stdout_receiver.recv().await {
+        while let Ok(msg) = stdout_receiver.recv().await {
             let old_status = *status.read().await;
             let new_status =
                 manage_status(&discord_msg_sender, old_status, max_players, &msg).await;
@@ -102,7 +101,7 @@ fn message_receiver(
                 let mut timeout_w = timeout.write().await;
                 *timeout_w = true;
 
-                send_logs(channel_id, cache.clone(), timeout.clone(), client.clone());
+                await_log_cache(channel_id, cache.clone(), timeout.clone(), client.clone());
             }
         }
 
@@ -115,7 +114,7 @@ fn message_receiver(
     });
 }
 
-fn send_logs(
+fn await_log_cache(
     channel_id: Id<ChannelMarker>,
     cached: Arc<RwLock<String>>,
     timeout: Arc<RwLock<bool>>,

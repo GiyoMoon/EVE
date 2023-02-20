@@ -6,14 +6,23 @@ EVE lets you control a Minecraft server through Discord. It routes everything fr
 ## Configuration
 To run EVE, you need to set up a few environment variables:
 
-- `DISCORD_TOKEN`: The token of you Discord bot
-- `CONSOLE_CHANNEL_ID`: The the ID of the Discord channel which should be used as the console. EVE will pass every output from the server into this channel
+**Required**
+- `DISCORD_TOKEN`: The token of your Discord bot
+- `CONSOLE_CHANNEL_ID`: The the ID of the Discord channel which should be used as the console. EVE will pipe every stdout/stderr line from the server into this channel
 - `SERVER_JAR_PATH`: Path to the server executable. E.g. `/srv/server/server.jar`
 - `SERVER_MEMORY`: Memory in megabytes to assign to the minecraft server. E.g `6144`
+
+**Optional**
 - `MAX_PLAYERS`: (Optional) Max players of your minecraft server. This is only used for the bot presence and if not provided, it won't show the player count there.
 - `JVM_FLAGS`: (Optional) Additional jvm flags to pass to the server instance
 - `AUTO_ACCEPT_EULA`: (Optional) If the EULA should be accepted automatically
 - `RUST_LOG`: (Optional) Rust log level (Does not affect the server output). Set it to `info` to recieve all information or to `warn` if you just want to receive warnings/errors.
+
+**Backup**
+- `BACKUP_FOLDER`: Optional (Required when using /backup). Backup folder path to save server backups into
+- `SERVER_FOLDER`: Optional (Required when using /backup). Folder path of the Mineraft server.
+- `BACKUP_NAME`: Optional. File name of the backup file. Is a format string which is used as the input for [`Astrolabe::DateTime::format`](https://docs.rs/astrolabe/latest/astrolabe/struct.DateTime.html#method.format). Default: `'backup'_yyyy_MM_dd_HH_mm'.tar.gz'`
+- `BACKUP_COMMAND`: Optional. Command to execute when creating a backup. You can use `{BACKUP_FOLDER}`, `{SERVER_FOLDER}`, `{BACKUP_NAME}` which will be replaced with the environment variables. Default: `tar -czvf {BACKUP_FOLDER}/{BACKUP_NAME} {SERVER_FOLDER}`
 
 ## Running
 There are multiple ways to run EVE:
@@ -24,7 +33,7 @@ The most convenient way is to run it in a Docker container. EVE gets automatical
 
 Example run command:
 ```bash
-docker run -d -p 25565:25565 -e RUST_LOG=info -e DISCORD_TOKEN=YOUR_BOT_TOKEN -e CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID -e SERVER_JAR_PATH=/eve/server/server.jar -e SERVER_MEMORY=6144 -e MAX_PLAYERS=5 -e AUTO_ACCEPT_EULA=1 -v /srv/server:/eve/server --name EVE ghcr.io/giyomoon/eve:java17
+docker run -d -p 25565:25565 -e DISCORD_TOKEN=YOUR_BOT_TOKEN -e CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID -e SERVER_JAR_PATH=/eve/server/server.jar -e SERVER_MEMORY=6144 -v /srv/server:/eve/server --name EVE ghcr.io/giyomoon/eve:java17
 ```
 Additional ports can be mapped if you are running a dynmap for example.
 
@@ -64,13 +73,10 @@ LimitNPROC=infinity
 Restart=on-failure
 RestartSec=2
 
-Environment="RUST_LOG=info"
 Environment="DISCORD_TOKEN=YOUR_BOT_TOKEN"
 Environment="CONSOLE_CHANNEL_ID=YOUR_CHANNEL_ID"
 Environment="SERVER_JAR_PATH=/srv/server/server.jar"
 Environment="SERVER_MEMORY=6144"
-Environment="MAX_PLAYERS=5"
-Environment="AUTO_ACCEPT_EULA=1"
 
 [Install]
 WantedBy=multi-user.target

@@ -12,6 +12,7 @@ pub(crate) enum ServerConfigError {
 pub(crate) enum ServerCommand {
     Stdin(String),
     StartServer { config: ServerConfig },
+    Backup,
 }
 
 #[derive(Error, Debug)]

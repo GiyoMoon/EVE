@@ -10,7 +10,7 @@ use std::{
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::{self, Child},
-    sync::mpsc,
+    sync::broadcast,
 };
 
 pub(super) struct ServerInternal {
@@ -20,7 +20,7 @@ pub(super) struct ServerInternal {
 impl ServerInternal {
     pub(super) async fn launch(
         config: &ServerConfig,
-        stdout_sender: mpsc::Sender<String>,
+        stdout_sender: broadcast::Sender<String>,
     ) -> Result<(Self, Child), ServerStartError> {
         config.validate()?;
 
@@ -55,7 +55,6 @@ impl ServerInternal {
             info!("Accepting eula");
             stdout_sender
                 .send(":green_circle: Accepting eula".to_string())
-                .await
                 .expect("Failed sending value over sender");
 
             let mut eula_file = File::create(eula_path)?;
@@ -80,7 +79,7 @@ impl ServerInternal {
 
     pub(super) async fn run(
         mut process: Child,
-        stdout_sender: mpsc::Sender<String>,
+        stdout_sender: broadcast::Sender<String>,
     ) -> io::Result<ExitStatus> {
         let mut stdout = BufReader::new(
             process
@@ -108,7 +107,6 @@ impl ServerInternal {
             {
                 stdout_sender_clone
                     .send(line)
-                    .await
                     .expect("Failed sending value over sender");
             }
         });
@@ -120,7 +118,6 @@ impl ServerInternal {
             {
                 stdout_sender
                     .send(line)
-                    .await
                     .expect("Failed sending value over sender");
             }
         });

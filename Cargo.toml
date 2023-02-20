@@ -22,6 +22,7 @@ thiserror = "1.0"
 twilight-gateway = "0.15"
 twilight-http = "0.15"
 twilight-model = "0.15"
+astrolabe = "0.2"
 
 [dependencies.tokio]
 version = "1.0"
