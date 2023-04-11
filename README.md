@@ -4,7 +4,7 @@ EVE lets you control a Minecraft server through Discord. It routes everything fr
 
 ![Example](./assets/example.png)
 ## Configuration
-To run EVE, you need to set up a few environment variables:
+To run EVE, you need to set up a few environment variables.
 
 **Required**
 - `DISCORD_TOKEN`: The token of your Discord bot
@@ -13,16 +13,16 @@ To run EVE, you need to set up a few environment variables:
 - `SERVER_MEMORY`: Memory in megabytes to assign to the minecraft server. E.g `6144`
 
 **Optional**
-- `MAX_PLAYERS`: (Optional) Max players of your minecraft server. This is only used for the bot presence and if not provided, it won't show the player count there.
-- `JVM_FLAGS`: (Optional) Additional jvm flags to pass to the server instance
-- `AUTO_ACCEPT_EULA`: (Optional) If the EULA should be accepted automatically
-- `RUST_LOG`: (Optional) Rust log level (Does not affect the server output). Set it to `info` to recieve all information or to `warn` if you just want to receive warnings/errors.
+- `MAX_PLAYERS`: Max players of your minecraft server. This is only used for the bot presence and if not provided, it won't show the player count there.
+- `JVM_FLAGS`: Additional jvm flags to pass to the server instance
+- `AUTO_ACCEPT_EULA`: If the EULA should be accepted automatically
+- `RUST_LOG`: Rust log level (Does not affect the server output). Set it to `info` to recieve all information or to `warn` if you just want to receive warnings/errors.
 
 **Backup**
-- `BACKUP_FOLDER`: Optional (Required when using /backup). Backup folder path to save server backups into
-- `SERVER_FOLDER`: Optional (Required when using /backup). Folder path of the Mineraft server.
-- `BACKUP_NAME`: Optional. File name of the backup file. Is a format string which is used as the input for [`Astrolabe::DateTime::format`](https://docs.rs/astrolabe/latest/astrolabe/struct.DateTime.html#method.format). Default: `'backup'_yyyy_MM_dd_HH_mm'.tar.gz'`
-- `BACKUP_COMMAND`: Optional. Command to execute when creating a backup. You can use `{BACKUP_FOLDER}`, `{SERVER_FOLDER}`, `{BACKUP_NAME}` which will be replaced with the environment variables. Default: `tar -czvf {BACKUP_FOLDER}/{BACKUP_NAME} {SERVER_FOLDER}`
+- `BACKUP_FOLDER`(_Optional_): Backup folder path to save server backups into. **Required** when using the `/backup` command.
+- `SERVER_FOLDER`(_Optional_): Folder path of the Mineraft server. **Required** when using the `/backup` command.
+- `BACKUP_NAME`(_Optional_): Name of the backup file. Is a format string which is used as the input for [`Astrolabe::DateTime::format`](https://docs.rs/astrolabe/latest/astrolabe/struct.DateTime.html#method.format). Default: `'backup'_yyyy_MM_dd_HH_mm'.tar.gz'`
+- `BACKUP_COMMAND`(_Optional_): Command to execute when creating a backup. You can use `{BACKUP_FOLDER}`, `{SERVER_FOLDER}`, `{BACKUP_NAME}` which will be replaced with the environment variables. Default: `tar -czf {BACKUP_FOLDER}/{BACKUP_NAME} {SERVER_FOLDER}`
 
 ## Running
 There are multiple ways to run EVE:

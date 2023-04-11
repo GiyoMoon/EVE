@@ -158,7 +158,7 @@ impl ServerManager {
 
         let backup_command = env::var("BACKUP_COMMAND").ok();
 
-        let command = if let Some(backup_command) = backup_command {
+        let child_result = if let Some(backup_command) = backup_command {
             let backup_command = backup_command
                 .replace("{BACKUP_FOLDER}", &backup_folder)
                 .replace("{BACKUP_NAME}", &backup_name)
@@ -176,7 +176,7 @@ impl ServerManager {
             let mut command = Command::new("tar");
             command
                 .args([
-                    "-czvf",
+                    "-czf",
                     &format!("{backup_folder}/{backup_name}"),
                     &server_folder,
                 ])
@@ -185,7 +185,7 @@ impl ServerManager {
                 .spawn()
         };
 
-        command
+        child_result
             .map_err(|err| {
                 (
                     format!(
