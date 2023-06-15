@@ -25,7 +25,7 @@ ENV TZ=Europe/Zurich
 
 ARG JAVA_JDK
 
-# Install java jdk 17
+# Install java jdk
 RUN apk add --no-cache dpkg
 COPY --from=java /usr/lib/jvm/ /usr/lib/jvm/
 RUN echo "PATH=\"/usr/lib/jvm/$JAVA_JDK/bin\"" > /etc/environment
