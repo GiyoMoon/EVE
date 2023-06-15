@@ -16,15 +16,20 @@ async fn main() -> Result<(), anyhow::Error> {
         .expect("CONSOLE_CHANNEL_ID env var not found")
         .parse::<u64>()
         .expect("CONSOLE_CHANNEL_ID env var has to be an u64 integer");
-    env::var("SERVER_JAR_PATH").expect("SERVER_JAR_PATH env var not found");
-    env::var("SERVER_MEMORY")
-        .expect("SERVER_MEMORY env var not found")
-        .parse::<u16>()
-        .expect("SERVER_MEMORY env var has to be an u16 integer");
+
+    env::var("SERVER_FOLDER").expect("SERVER_FOLDER env var not found");
     let _ = env::var("MAX_PLAYERS").map(|max| {
         max.parse::<u8>()
             .expect("MAX_PLAYERS env var has to be an u8 integer")
     });
+
+    if env::var("SERVER_RUN_COMMAND").is_err() {
+        env::var("SERVER_JAR").expect("SERVER_JAR env var not found");
+        env::var("SERVER_MEMORY")
+            .expect("SERVER_MEMORY env var not found")
+            .parse::<u16>()
+            .expect("SERVER_MEMORY env var has to be an u16 integer");
+    }
 
     info!("Starting up...");
 

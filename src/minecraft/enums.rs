@@ -1,18 +1,26 @@
-use super::config::ServerConfig;
+use super::config::{CustomServerConfig, ServerConfig};
 use std::{io, path::PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub(crate) enum ServerConfigError {
-    #[error("Server path {0} does not point to a file.")]
+    #[error("Server path {0} does not point to a folder.")]
     InvalidPath(PathBuf),
+    #[error("Server jar {0} does not point to a file.")]
+    InvalidJar(PathBuf),
 }
 
 #[derive(Debug, Clone)]
 pub(crate) enum ServerCommand {
     Stdin(String),
-    StartServer { config: ServerConfig },
+    StartServer { config: ServerConfigType },
     Backup,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum ServerConfigType {
+    Default(ServerConfig),
+    Custom(CustomServerConfig),
 }
 
 #[derive(Error, Debug)]

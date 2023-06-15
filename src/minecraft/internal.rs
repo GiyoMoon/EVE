@@ -1,7 +1,9 @@
-use super::{config::ServerConfig, enums::ServerStartError};
+use super::{
+    config::{CustomServerConfig, ServerConfig},
+    enums::ServerStartError,
+};
 use log::info;
 use std::{
-    ffi::OsStr,
     fs::{self, File},
     io::{self, Write},
     path::Path,
@@ -24,27 +26,15 @@ impl ServerInternal {
     ) -> Result<(Self, Child), ServerStartError> {
         config.validate()?;
 
-        let folder = config
-            .path
-            .as_path()
-            .parent()
-            .map(|p| p.as_os_str())
-            .unwrap_or_else(|| OsStr::new("."));
-
-        let server_jar = config
-            .path
-            .file_name()
-            .expect("Failed getting file name of server jar");
-
         let args = format!(
             "-Xms{}M -Xmx{}M -jar {} {} nogui",
             config.memory,
             config.memory,
-            server_jar.to_str().unwrap_or(""),
+            config.jar.to_str().unwrap_or(""),
             config.jvm_flags.as_deref().unwrap_or(""),
         );
 
-        let eula_path = &format!("{}/eula.txt", folder.to_str().unwrap_or("."));
+        let eula_path = &format!("{}/eula.txt", config.folder.to_str().unwrap_or("."));
 
         if config.auto_accept_eula
             && (!Path::new(eula_path).exists()
@@ -61,9 +51,57 @@ impl ServerInternal {
             eula_file.write_all(b"eula=true")?;
         }
 
+        info!("Launching start command java with args {args}");
+
         let mut child = process::Command::new("java")
-            .current_dir(folder)
-            .args(args.split(' ').collect::<Vec<&str>>())
+            .current_dir(&config.folder)
+            .args(args.split_whitespace().collect::<Vec<&str>>())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        let stdin = child
+            .stdin
+            .take()
+            .expect("Failed getting stdin of minecraft process");
+
+        Ok((Self { stdin }, child))
+    }
+
+    pub(super) async fn launch_custom(
+        config: &CustomServerConfig,
+        stdout_sender: broadcast::Sender<String>,
+    ) -> Result<(Self, Child), ServerStartError> {
+        config.validate()?;
+
+        let eula_path = &format!("{}/eula.txt", config.folder.to_str().unwrap_or("."));
+
+        if config.auto_accept_eula
+            && (!Path::new(eula_path).exists()
+                || !fs::read_to_string(eula_path)
+                    .unwrap_or_else(|err| panic!("Failed reading {eula_path}: {err}"))
+                    .contains("eula=true"))
+        {
+            info!("Accepting eula");
+            stdout_sender
+                .send(":green_circle: Accepting eula".to_string())
+                .expect("Failed sending value over sender");
+
+            let mut eula_file = File::create(eula_path)?;
+            eula_file.write_all(b"eula=true")?;
+        }
+        let mut split_run_command = config.run_cmd.split_whitespace();
+        let command = split_run_command.next().expect("");
+
+        info!(
+            "Launching custom start command {command} with args {:?}",
+            split_run_command.clone().collect::<Vec<&str>>()
+        );
+
+        let mut child = process::Command::new(command)
+            .current_dir(&config.folder)
+            .args(split_run_command.collect::<Vec<&str>>())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

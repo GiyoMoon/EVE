@@ -44,20 +44,27 @@ impl ServerManager {
                             continue;
                         }
                         info!("Minecraft server started");
-                        let child =
-                            match ServerInternal::launch(&config, self.stdout_sender.clone()).await
-                            {
-                                Ok((internal, child)) => {
-                                    *self.internal.lock().await = Some(internal);
-                                    child
-                                }
-                                Err(e) => {
-                                    self.stdout_sender
-                                        .send(format!("Failed to start server: {e}"))
-                                        .expect("Failed sending value over sender");
-                                    continue;
-                                }
-                            };
+                        let server_launch_result = match config {
+                            crate::minecraft::ServerConfigType::Default(config) => {
+                                ServerInternal::launch(&config, self.stdout_sender.clone()).await
+                            }
+                            crate::minecraft::ServerConfigType::Custom(config) => {
+                                ServerInternal::launch_custom(&config, self.stdout_sender.clone())
+                                    .await
+                            }
+                        };
+                        let child = match server_launch_result {
+                            Ok((internal, child)) => {
+                                *self.internal.lock().await = Some(internal);
+                                child
+                            }
+                            Err(e) => {
+                                self.stdout_sender
+                                    .send(format!("Failed to start server: {e}"))
+                                    .expect("Failed sending value over sender");
+                                continue;
+                            }
+                        };
 
                         let stdout_sender_clone = self.stdout_sender.clone();
                         let internal_clone = self.internal.clone();

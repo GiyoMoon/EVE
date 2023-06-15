@@ -1,4 +1,6 @@
-use crate::minecraft::{ServerCommand, ServerConfig, ServerManager, ServerStatus};
+use crate::minecraft::{
+    CustomServerConfig, ServerCommand, ServerConfig, ServerConfigType, ServerManager, ServerStatus,
+};
 use log::{info, warn};
 use std::{env, sync::Arc};
 use tokio::sync::mpsc;
@@ -61,24 +63,55 @@ pub(crate) async fn handle_interaction(
                     )
                     .await;
 
-                    let server_path = env::var("SERVER_JAR_PATH").expect("");
-                    let memory = env::var("SERVER_MEMORY").expect("").parse().expect("");
-                    let jvm_flags = env::var("JVM_FLAGS").ok();
-                    let auto_accept_eula = env::var("AUTO_ACCEPT_EULA").map_or(false, |v| {
-                        v == "1" || v.to_lowercase() == "true" || v.to_lowercase() == "t"
-                    });
+                    match env::var("SERVER_RUN_COMMAND") {
+                        Ok(server_run_command) => {
+                            let server_folder = env::var("SERVER_FOLDER").expect("");
 
-                    cmd_sender
-                        .send(ServerCommand::StartServer {
-                            config: ServerConfig::new(
-                                server_path,
-                                memory,
-                                jvm_flags,
-                                auto_accept_eula,
-                            ),
-                        })
-                        .await
-                        .expect("Failed sending value over sender");
+                            let auto_accept_eula =
+                                env::var("AUTO_ACCEPT_EULA").map_or(false, |v| {
+                                    v == "1"
+                                        || v.to_lowercase() == "true"
+                                        || v.to_lowercase() == "t"
+                                });
+
+                            cmd_sender
+                                .send(ServerCommand::StartServer {
+                                    config: ServerConfigType::Custom(CustomServerConfig::new(
+                                        server_folder,
+                                        auto_accept_eula,
+                                        server_run_command,
+                                    )),
+                                })
+                                .await
+                                .expect("Failed sending value over sender");
+                        }
+                        Err(_) => {
+                            let server_folder = env::var("SERVER_FOLDER").expect("");
+                            let server_jar = env::var("SERVER_JAR").expect("");
+                            let memory = env::var("SERVER_MEMORY").expect("").parse().expect("");
+
+                            let jvm_flags = env::var("JVM_FLAGS").ok();
+                            let auto_accept_eula =
+                                env::var("AUTO_ACCEPT_EULA").map_or(false, |v| {
+                                    v == "1"
+                                        || v.to_lowercase() == "true"
+                                        || v.to_lowercase() == "t"
+                                });
+
+                            cmd_sender
+                                .send(ServerCommand::StartServer {
+                                    config: ServerConfigType::Default(ServerConfig::new(
+                                        server_folder,
+                                        server_jar,
+                                        memory,
+                                        jvm_flags,
+                                        auto_accept_eula,
+                                    )),
+                                })
+                                .await
+                                .expect("Failed sending value over sender");
+                        }
+                    }
                 } else {
                     respond_to_interaction(
                         interaction_client,
