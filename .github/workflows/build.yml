@@ -45,8 +45,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            JAVA_URL=https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u372-b07/OpenJDK8U-jdk_x64_alpine-linux_hotspot_8u372b07.tar.gz
-            JAVA_JDK=jdk8u372-b07
+            JAVA_URL_amd64=https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u422-b05/OpenJDK8U-jdk_x64_alpine-linux_hotspot_8u422b05.tar.gz
+            JAVA_URL_arm64=https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u422-b05/OpenJDK8U-jdk_aarch64_linux_hotspot_8u422b05.tar.gz
+            JAVA_JDK=jdk8u422-b05
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build-java11:
     runs-on: ubuntu-latest
@@ -87,8 +90,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            JAVA_URL=https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.19%2B7/OpenJDK11U-jdk_x64_alpine-linux_hotspot_11.0.19_7.tar.gz
-            JAVA_JDK=jdk-11.0.19+7
+            JAVA_URL_amd64=https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.24%2B8/OpenJDK11U-jdk_x64_alpine-linux_hotspot_11.0.24_8.tar.gz
+            JAVA_URL_arm64=https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.24%2B8/OpenJDK11U-jdk_aarch64_linux_hotspot_11.0.24_8.tar.gz
+            JAVA_JDK=jdk-11.0.24+8
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build-java17:
     runs-on: ubuntu-latest
@@ -129,8 +135,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            JAVA_URL=https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.7%2B7/OpenJDK17U-jdk_x64_alpine-linux_hotspot_17.0.7_7.tar.gz
-            JAVA_JDK=jdk-17.0.7+7
+            JAVA_URL_amd64=https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_alpine-linux_hotspot_17.0.9_9.tar.gz
+            JAVA_URL_arm64=https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_aarch64_linux_hotspot_17.0.9_9.tar.gz
+            JAVA_JDK=jdk-17.0.9+9
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   build-java21:
     runs-on: ubuntu-latest
@@ -171,6 +180,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            JAVA_URL=https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.3%2B9/OpenJDK21U-jdk_x64_alpine-linux_hotspot_21.0.3_9.tar.gz
-            JAVA_JDK=jdk-21.0.3+9
+            JAVA_URL_amd64=https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.4%2B7/OpenJDK21U-jdk_x64_alpine-linux_hotspot_21.0.4_7.tar.gz
+            JAVA_URL_arm64=https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.4%2B7/OpenJDK21U-jdk_aarch64_alpine-linux_hotspot_21.0.4_7.tar.gz
+            JAVA_JDK=jdk-21.0.4+7
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
